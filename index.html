@@ -80,10 +80,10 @@
 
     async function sendToAI(text) {
         updateStatus("جاري الاتصال بـ Gemini... 🧠", "loading");
-        const prompt = `أجب بصيغة مصفوفة JSON فقط: [{"question": "سؤال", "answer": "جواب"}]. حول النص التالي لأسئلة مراجعة: ${text}`;
+        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة للمراجعة: [{"question": "سؤال", "answer": "جواب"}]. النص: ${text}`;
         
-        // التعديل الجوهري لعام 2026: استخدام v1 والمسار الكامل للموديل
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+        // التعديل الحاسم: استخدام المسمى gemini-1.5-flash-latest لضمان العثور على النموذج
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
 
         try {
             const r = await fetch(url, {
