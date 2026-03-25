@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flashcards AI - محمد</title>
+    <title>Flashcards AI - Mohammed</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { --primary: #6c5ce7; --bg: #f8f9fa; --text: #2d3436; --card-bg: #ffffff; --success: #00b894; --danger: #d63031; --shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -31,19 +31,19 @@
 </head>
 <body>
 <header>
-    <div style="font-size: 1.3rem;">🧠 <b>Flashcards AI</b></div>
+    <div style="font-size: 1.3rem;">🧠 <b>Sanad DZ Flashcards</b></div>
     <button onclick="toggleTheme()" style="width: auto; padding: 5px 15px; background: none; color: var(--text); border: 1px solid var(--primary)">ثيم 🌓</button>
 </header>
 <div class="container">
     <div class="panel">
-        <h2 style="margin-top: 0;">مرحباً محمد!</h2>
-        <p>صور درسك أو اكتب النص لتحويله لأسئلة مراجعة.</p>
+        <h2 style="margin-top: 0;">مرحباً محمد! 🌟</h2>
+        <p>اكتب الدرس أو صوره وسأحاول بكل قوتي تحليله لك.</p>
         <div id="camera-wrapper"><video id="video" autoplay playsinline></video><div class="capture-btn" onclick="takeSnapshot()"></div></div>
         <button id="openCamBtn" onclick="initCamera()">📷 تصوير درس مباشر</button>
         <button class="secondary-btn" onclick="toggleInput()">✍️ إدخال نص يدوياً</button>
         <div id="manualArea" style="display: none; margin-top: 15px;">
             <textarea id="rawText" style="width:100%; height:120px; border-radius:10px; padding:10px;" placeholder="أدخل محتوى الدرس هنا..."></textarea>
-            <button onclick="processFromText()">تحليل النص بالذكاء الاصطناعي</button>
+            <button onclick="processFromText()">تحليل الدرس (محاولة ذكية)</button>
         </div>
         <div id="status-msg"></div>
     </div>
@@ -54,9 +54,17 @@
     </div>
 </div>
 <canvas id="canvas" style="display:none;"></canvas>
+
 <script>
     let cards = []; let currentIdx = 0; let stream;
     const API_KEY = "AIzaSyCxcwpjtwk7jJ-jp_sTstP7gTyMMgfmKAo"; 
+    // قائمة النماذج المتاحة للتجربة التلقائية
+    const MODELS = [
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-pro",
+        "gemini-pro"
+    ];
 
     async function initCamera() {
         document.getElementById('openCamBtn').style.display = 'none';
@@ -79,37 +87,40 @@
     function processFromText() { const t = document.getElementById('rawText').value; if(t.trim().length > 5) sendToAI(t); }
 
     async function sendToAI(text) {
-        updateStatus("جاري الاتصال بـ Gemini... 🧠", "loading");
-        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة للمراجعة: [{"question": "سؤال", "answer": "جواب"}]. النص: ${text}`;
+        updateStatus("جاري البحث عن النموذج المناسب... 🧠", "loading");
+        const prompt = `أجب بصيغة مصفوفة JSON فقط: [{"question": "سؤال", "answer": "جواب"}]. حول النص التالي لأسئلة مراجعة: ${text}`;
         
-        // التعديل الحاسم: استخدام المسمى gemini-1.5-flash-latest لضمان العثور على النموذج
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
+        let success = false;
 
-        try {
-            const r = await fetch(url, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-            const d = await r.json();
-            
-            if (d.error) {
-                updateStatus("خطأ تقني: " + d.error.message, "error");
-                return;
-            }
-            
-            let aiText = d.candidates[0].content.parts[0].text;
-            const s = aiText.indexOf('['); const e = aiText.lastIndexOf(']') + 1;
-            cards = JSON.parse(aiText.substring(s, e));
+        for (let modelName of MODELS) {
+            updateStatus(`تجربة نموذج ${modelName}...`, "loading");
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${API_KEY}`;
+                const r = await fetch(url, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const d = await r.json();
+                
+                if (!d.error) {
+                    let aiText = d.candidates[0].content.parts[0].text;
+                    const s = aiText.indexOf('['); const e = aiText.lastIndexOf(']') + 1;
+                    cards = JSON.parse(aiText.substring(s, e));
+                    if (cards.length > 0) {
+                        currentIdx = 0;
+                        document.getElementById('resultsArea').style.display = 'block';
+                        render();
+                        updateStatus(`نجحنا باستخدام ${modelName}! ✅`, "");
+                        document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
+                        success = true;
+                        break; // اخرج من الحلقة فور النجاح
+                    }
+                }
+            } catch (e) { console.log(`فشل ${modelName}, نجرب التالي...`); }
+        }
 
-            if (cards.length > 0) {
-                currentIdx = 0;
-                document.getElementById('resultsArea').style.display = 'block';
-                render();
-                updateStatus("تم بنجاح! ✅", "");
-                document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
-            }
-        } catch (e) { 
-            updateStatus("حدث خطأ في معالجة الرد. جرب مرة أخرى.", "error"); 
+        if (!success) {
+            updateStatus("للأسف، جوجل يرفض كل النماذج حالياً. قد يكون هناك مشكلة في الـ API Key نفسه.", "error");
         }
     }
 
