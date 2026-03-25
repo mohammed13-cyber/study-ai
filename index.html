@@ -6,179 +6,104 @@
     <title>مُساعدي الدراسي الذكي - Flashcards Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        :root {
-            --primary: #6c5ce7; --bg: #f8f9fa; --text: #2d3436; --card-bg: #ffffff;
-            --success: #00b894; --danger: #d63031; --shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        [data-theme="dark"] {
-            --bg: #1e1e2e; --text: #fdfdfd; --card-bg: #2d2d44; --primary: #a29bfe;
-        }
-
+        :root { --primary: #6c5ce7; --bg: #f8f9fa; --text: #2d3436; --card-bg: #ffffff; --success: #00b894; --danger: #d63031; --shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        [data-theme="dark"] { --bg: #1e1e2e; --text: #fdfdfd; --card-bg: #2d2d44; --primary: #a29bfe; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; min-height: 100vh; }
         header { background: var(--card-bg); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); }
-        
         .container { max-width: 600px; margin: 30px auto; padding: 0 20px; }
         .panel { background: var(--card-bg); padding: 25px; border-radius: 20px; box-shadow: var(--shadow); text-align: center; }
-        
         #camera-wrapper { display: none; position: relative; width: 100%; max-width: 400px; margin: 0 auto 20px; border-radius: 15px; overflow: hidden; border: 3px solid var(--primary); }
         video { width: 100%; height: auto; display: block; }
-        .capture-btn { 
-            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
-            width: 65px; height: 65px; border-radius: 50%; border: 5px solid white; cursor: pointer;
-            background: rgba(255,255,255,0.4);
-        }
-
-        button { 
-            background: var(--primary); color: white; border: none; padding: 14px; 
-            border-radius: 12px; cursor: pointer; font-size: 16px; width: 100%; 
-            margin-top: 10px; font-weight: bold; transition: 0.2s;
-        }
+        .capture-btn { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); width: 65px; height: 65px; border-radius: 50%; border: 5px solid white; cursor: pointer; background: rgba(255,255,255,0.4); }
+        button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; font-weight: bold; transition: 0.2s; }
         .secondary-btn { background: none; color: var(--primary); border: 2px solid var(--primary); }
-
         #status-msg { margin-top: 15px; padding: 10px; border-radius: 10px; font-weight: bold; min-height: 40px; }
         .loading { color: var(--primary); background: rgba(108, 92, 231, 0.1); }
         .error { color: var(--danger); background: rgba(214, 48, 49, 0.1); }
-
         .flashcard-section { display: none; margin-top: 40px; }
         .flashcard-box { perspective: 1000px; width: 100%; height: 280px; }
         .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: 0.6s; cursor: pointer; }
         .flashcard.flipped { transform: rotateY(180deg); }
-        .face { 
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; 
-            display: flex; align-items: center; justify-content: center; padding: 30px; 
-            border-radius: 25px; text-align: center; box-sizing: border-box; font-size: 1.3rem;
-            box-shadow: var(--shadow); border: 2px solid var(--primary);
-        }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; padding: 30px; border-radius: 25px; text-align: center; box-sizing: border-box; font-size: 1.3rem; box-shadow: var(--shadow); border: 2px solid var(--primary); }
         .front { background: var(--primary); color: white; }
         .back { background: var(--success); color: white; transform: rotateY(180deg); overflow-y: auto; }
     </style>
 </head>
 <body>
-
 <header>
     <div style="font-size: 1.3rem;">🧠 <b>Flashcards AI</b></div>
     <button onclick="toggleTheme()" style="width: auto; padding: 5px 15px; background: none; color: var(--text); border: 1px solid var(--primary)">ثيم 🌓</button>
 </header>
-
 <div class="container">
     <div class="panel">
         <h2 style="margin-top: 0;">مرحباً محمد!</h2>
-        <p>صور صفحة من كتابك أو اكتب النص لتحويله لأسئلة ذكية.</p>
-
-        <div id="camera-wrapper">
-            <video id="video" autoplay playsinline></video>
-            <div class="capture-btn" onclick="takeSnapshot()"></div>
-        </div>
-
+        <p>صور درسك أو اكتب النص لتحويله لأسئلة مراجعة.</p>
+        <div id="camera-wrapper"><video id="video" autoplay playsinline></video><div class="capture-btn" onclick="takeSnapshot()"></div></div>
         <button id="openCamBtn" onclick="initCamera()">📷 تصوير درس مباشر</button>
         <button class="secondary-btn" onclick="toggleInput()">✍️ إدخال نص يدوياً</button>
-
         <div id="manualArea" style="display: none; margin-top: 15px;">
             <textarea id="rawText" style="width:100%; height:120px; border-radius:10px; padding:10px;" placeholder="أدخل محتوى الدرس هنا..."></textarea>
             <button onclick="processFromText()">تحليل النص بالذكاء الاصطناعي</button>
         </div>
-
         <div id="status-msg"></div>
     </div>
-
     <div class="flashcard-section" id="resultsArea">
-        <div class="flashcard-box">
-            <div class="flashcard" id="mainCard" onclick="this.classList.toggle('flipped')">
-                <div class="face front" id="q-box">جاري التحميل...</div>
-                <div class="face back" id="a-box">الجواب</div>
-            </div>
-        </div>
-        <div style="display: flex; gap: 15px; margin-top: 25px;">
-            <button class="secondary-btn" onclick="goPrev()">السابق</button>
-            <button onclick="goNext()">التالي</button>
-        </div>
+        <div class="flashcard-box"><div class="flashcard" id="mainCard" onclick="this.classList.toggle('flipped')"><div class="face front" id="q-box">جاري التحميل...</div><div class="face back" id="a-box">الجواب</div></div></div>
+        <div style="display: flex; gap: 15px; margin-top: 25px;"><button class="secondary-btn" onclick="goPrev()">السابق</button><button onclick="goNext()">التالي</button></div>
         <p id="counter" style="text-align:center; font-weight: bold;"></p>
     </div>
 </div>
-
 <canvas id="canvas" style="display:none;"></canvas>
-
 <script>
-    let cards = [];
-    let currentIdx = 0;
-    let stream;
-    // تم تحديث المفتاح هنا بنجاح
+    let cards = []; let currentIdx = 0; let stream;
+    // مفتاح الـ API الجديد الخاص بك
     const API_KEY = "AIzaSyCxcwpjtwk7jJ-jp_sTstP7gTyMMgfmKAo"; 
 
     async function initCamera() {
         document.getElementById('openCamBtn').style.display = 'none';
         document.getElementById('camera-wrapper').style.display = 'block';
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            document.getElementById('video').srcObject = stream;
-        } catch (e) { updateStatus("خطأ: يرجى إعطاء إذن الكاميرا", "error"); }
+        try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); document.getElementById('video').srcObject = stream; } 
+        catch (e) { updateStatus("خطأ: يرجى تفعيل إذن الكاميرا", "error"); }
     }
 
     async function takeSnapshot() {
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        const video = document.getElementById('video'); const canvas = document.getElementById('canvas');
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
-        
         if(stream) stream.getTracks().forEach(t => t.stop());
-        document.getElementById('camera-wrapper').style.display = 'none';
-        document.getElementById('openCamBtn').style.display = 'block';
-
+        document.getElementById('camera-wrapper').style.display = 'none'; document.getElementById('openCamBtn').style.display = 'block';
         updateStatus("جاري استخراج النص من الصورة...", "loading");
-        try {
-            const res = await Tesseract.recognize(canvas.toDataURL('image/jpeg'), 'ara+eng');
-            sendToAI(res.data.text);
-        } catch(e) { updateStatus("خطأ في قراءة الصورة", "error"); }
+        try { const res = await Tesseract.recognize(canvas.toDataURL('image/jpeg'), 'ara+eng'); sendToAI(res.data.text); } 
+        catch(e) { updateStatus("خطأ في قراءة الصورة", "error"); }
     }
 
-    function processFromText() {
-        const t = document.getElementById('rawText').value;
-        if(t.trim().length > 10) sendToAI(t);
-        else updateStatus("النص قصير جداً لعمل مراجعة مفيدة!", "error");
-    }
+    function processFromText() { const t = document.getElementById('rawText').value; if(t.trim().length > 5) sendToAI(t); }
 
     async function sendToAI(text) {
-        updateStatus("جاري الاتصال بـ Gemini وابتكار الأسئلة... 🧠", "loading");
-        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة ذكية للمراجعة باللغة العربية. الرد يجب أن يكون بصيغة مصفوفة JSON فقط: [{"question": "سؤال", "answer": "جواب"}]. النص المراد تحليله: ${text}`;
-
+        updateStatus("جاري الاتصال بـ Gemini... 🧠", "loading");
+        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة ذكية للمراجعة باللغة العربية. الرد يجب أن يكون بصيغة مصفوفة JSON فقط: [{"question": "سؤال", "answer": "جواب"}]. النص: ${text}`;
         try {
-            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
+            // استخدام v1 لضمان التوافق التام
+            const r = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
-
             const d = await r.json();
+            if (d.error) { updateStatus("خطأ من جوجل: " + d.error.message, "error"); return; }
             
-            if (d.error) {
-                updateStatus("خطأ من جوجل: " + d.error.message, "error");
-                return;
-            }
-
             let aiText = d.candidates[0].content.parts[0].text;
-            
-            // تنظيف الرد لاستخراج المصفوفة فقط
-            const startIdx = aiText.indexOf('[');
-            const endIdx = aiText.lastIndexOf(']') + 1;
-            
-            if (startIdx === -1) throw new Error("JSON format error");
-            
-            const cleanJson = aiText.substring(startIdx, endIdx);
+            const s = aiText.indexOf('['); const e = aiText.lastIndexOf(']') + 1;
+            const cleanJson = aiText.substring(s, e);
             cards = JSON.parse(cleanJson);
 
             if (cards.length > 0) {
                 currentIdx = 0;
                 document.getElementById('resultsArea').style.display = 'block';
                 render();
-                updateStatus("تم توليد " + cards.length + " بطاقة مراجعة بنجاح! ✅", "");
-                // تمرير تلقائي لرؤية النتائج
+                updateStatus("تم توليد " + cards.length + " بطاقة بنجاح! ✅", "");
                 document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
             }
-        } catch (e) {
-            console.error(e);
-            updateStatus("فشل في تحليل النص. تأكد من أن النص واضح ومفهوم.", "error");
-        }
+        } catch (e) { updateStatus("فشل في تحليل النص. جرب نصاً أوضح.", "error"); }
     }
 
     function render() {
@@ -187,7 +112,6 @@
         document.getElementById('a-box').innerText = cards[currentIdx].answer;
         document.getElementById('counter').innerText = `${currentIdx + 1} / ${cards.length}`;
     }
-
     function goNext() { if(currentIdx < cards.length-1) { currentIdx++; render(); } }
     function goPrev() { if(currentIdx > 0) { currentIdx--; render(); } }
     function updateStatus(m, c) { const s = document.getElementById('status-msg'); s.innerText = m; s.className = c; }
