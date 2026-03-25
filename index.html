@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مُساعدي الدراسي الذكي - Flashcards Pro</title>
+    <title>Flashcards AI - محمد</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { --primary: #6c5ce7; --bg: #f8f9fa; --text: #2d3436; --card-bg: #ffffff; --success: #00b894; --danger: #d63031; --shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -37,13 +37,13 @@
 <div class="container">
     <div class="panel">
         <h2 style="margin-top: 0;">مرحباً محمد!</h2>
-        <p>جرب الآن، تم تصحيح مسار الذكاء الاصطناعي.</p>
+        <p>صور درسك أو اكتب النص لتحويله لأسئلة مراجعة.</p>
         <div id="camera-wrapper"><video id="video" autoplay playsinline></video><div class="capture-btn" onclick="takeSnapshot()"></div></div>
         <button id="openCamBtn" onclick="initCamera()">📷 تصوير درس مباشر</button>
         <button class="secondary-btn" onclick="toggleInput()">✍️ إدخال نص يدوياً</button>
         <div id="manualArea" style="display: none; margin-top: 15px;">
             <textarea id="rawText" style="width:100%; height:120px; border-radius:10px; padding:10px;" placeholder="أدخل محتوى الدرس هنا..."></textarea>
-            <button onclick="processFromText()">تحليل النص الآن</button>
+            <button onclick="processFromText()">تحليل النص بالذكاء الاصطناعي</button>
         </div>
         <div id="status-msg"></div>
     </div>
@@ -56,6 +56,7 @@
 <canvas id="canvas" style="display:none;"></canvas>
 <script>
     let cards = []; let currentIdx = 0; let stream;
+    // مفتاح الـ API الخاص بك
     const API_KEY = "AIzaSyCxcwpjtwk7jJ-jp_sTstP7gTyMMgfmKAo"; 
 
     async function initCamera() {
@@ -82,8 +83,8 @@
         updateStatus("جاري الاتصال بـ Gemini... 🧠", "loading");
         const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة للمراجعة: [{"question": "سؤال", "answer": "جواب"}]. النص: ${text}`;
         
-        // جربنا v1 و v1beta، الآن نستخدم المسار الأكثر شمولاً
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+        // التعديل الجوهري: استخدام v1 والنموذج gemini-1.5-flash بدون لاحقة
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
         try {
             const r = await fetch(url, {
@@ -93,8 +94,8 @@
             const d = await r.json();
             
             if (d.error) {
-                // إذا فشل v1beta، الكود سيعطيك رسالة الخطأ هنا وسنحاول تعديل الإصدار يدوياً
-                updateStatus("تنبيه من جوجل: " + d.error.message, "error");
+                // إذا فشل v1، سنظهر الرسالة التفصيلية لنعرف السبب
+                updateStatus("خطأ تقني: " + d.error.message, "error");
                 return;
             }
             
@@ -110,7 +111,7 @@
                 document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
             }
         } catch (e) { 
-            updateStatus("فشل الاتصال. تأكد من الإنترنت أو وضوح النص.", "error"); 
+            updateStatus("حدث خطأ في معالجة الرد. جرب مرة أخرى.", "error"); 
         }
     }
 
