@@ -56,7 +56,6 @@
 <canvas id="canvas" style="display:none;"></canvas>
 <script>
     let cards = []; let currentIdx = 0; let stream;
-    // مفتاح الـ API الخاص بك
     const API_KEY = "AIzaSyCxcwpjtwk7jJ-jp_sTstP7gTyMMgfmKAo"; 
 
     async function initCamera() {
@@ -81,9 +80,9 @@
 
     async function sendToAI(text) {
         updateStatus("جاري الاتصال بـ Gemini... 🧠", "loading");
-        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة للمراجعة: [{"question": "سؤال", "answer": "جواب"}]. النص: ${text}`;
+        const prompt = `أجب بصيغة مصفوفة JSON فقط: [{"question": "سؤال", "answer": "جواب"}]. حول النص التالي لأسئلة مراجعة: ${text}`;
         
-        // التعديل الجوهري: استخدام v1 والنموذج gemini-1.5-flash بدون لاحقة
+        // التعديل الجوهري لعام 2026: استخدام v1 والمسار الكامل للموديل
         const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
         try {
@@ -94,7 +93,6 @@
             const d = await r.json();
             
             if (d.error) {
-                // إذا فشل v1، سنظهر الرسالة التفصيلية لنعرف السبب
                 updateStatus("خطأ تقني: " + d.error.message, "error");
                 return;
             }
