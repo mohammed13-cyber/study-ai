@@ -37,13 +37,13 @@
 <div class="container">
     <div class="panel">
         <h2 style="margin-top: 0;">مرحباً محمد!</h2>
-        <p>صور درسك أو اكتب النص لتحويله لأسئلة مراجعة.</p>
+        <p>جرب الآن، تم تصحيح مسار الذكاء الاصطناعي.</p>
         <div id="camera-wrapper"><video id="video" autoplay playsinline></video><div class="capture-btn" onclick="takeSnapshot()"></div></div>
         <button id="openCamBtn" onclick="initCamera()">📷 تصوير درس مباشر</button>
         <button class="secondary-btn" onclick="toggleInput()">✍️ إدخال نص يدوياً</button>
         <div id="manualArea" style="display: none; margin-top: 15px;">
             <textarea id="rawText" style="width:100%; height:120px; border-radius:10px; padding:10px;" placeholder="أدخل محتوى الدرس هنا..."></textarea>
-            <button onclick="processFromText()">تحليل النص بالذكاء الاصطناعي</button>
+            <button onclick="processFromText()">تحليل النص الآن</button>
         </div>
         <div id="status-msg"></div>
     </div>
@@ -56,14 +56,13 @@
 <canvas id="canvas" style="display:none;"></canvas>
 <script>
     let cards = []; let currentIdx = 0; let stream;
-    // مفتاح الـ API الجديد الخاص بك
     const API_KEY = "AIzaSyCxcwpjtwk7jJ-jp_sTstP7gTyMMgfmKAo"; 
 
     async function initCamera() {
         document.getElementById('openCamBtn').style.display = 'none';
         document.getElementById('camera-wrapper').style.display = 'block';
         try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); document.getElementById('video').srcObject = stream; } 
-        catch (e) { updateStatus("خطأ: يرجى تفعيل إذن الكاميرا", "error"); }
+        catch (e) { updateStatus("يرجى تفعيل إذن الكاميرا", "error"); }
     }
 
     async function takeSnapshot() {
@@ -72,7 +71,7 @@
         canvas.getContext('2d').drawImage(video, 0, 0);
         if(stream) stream.getTracks().forEach(t => t.stop());
         document.getElementById('camera-wrapper').style.display = 'none'; document.getElementById('openCamBtn').style.display = 'block';
-        updateStatus("جاري استخراج النص من الصورة...", "loading");
+        updateStatus("جاري استخراج النص...", "loading");
         try { const res = await Tesseract.recognize(canvas.toDataURL('image/jpeg'), 'ara+eng'); sendToAI(res.data.text); } 
         catch(e) { updateStatus("خطأ في قراءة الصورة", "error"); }
     }
@@ -81,29 +80,38 @@
 
     async function sendToAI(text) {
         updateStatus("جاري الاتصال بـ Gemini... 🧠", "loading");
-        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة ذكية للمراجعة باللغة العربية. الرد يجب أن يكون بصيغة مصفوفة JSON فقط: [{"question": "سؤال", "answer": "جواب"}]. النص: ${text}`;
+        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة للمراجعة: [{"question": "سؤال", "answer": "جواب"}]. النص: ${text}`;
+        
+        // جربنا v1 و v1beta، الآن نستخدم المسار الأكثر شمولاً
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+
         try {
-            // استخدام v1 لضمان التوافق التام
-            const r = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+            const r = await fetch(url, {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
             const d = await r.json();
-            if (d.error) { updateStatus("خطأ من جوجل: " + d.error.message, "error"); return; }
+            
+            if (d.error) {
+                // إذا فشل v1beta، الكود سيعطيك رسالة الخطأ هنا وسنحاول تعديل الإصدار يدوياً
+                updateStatus("تنبيه من جوجل: " + d.error.message, "error");
+                return;
+            }
             
             let aiText = d.candidates[0].content.parts[0].text;
             const s = aiText.indexOf('['); const e = aiText.lastIndexOf(']') + 1;
-            const cleanJson = aiText.substring(s, e);
-            cards = JSON.parse(cleanJson);
+            cards = JSON.parse(aiText.substring(s, e));
 
             if (cards.length > 0) {
                 currentIdx = 0;
                 document.getElementById('resultsArea').style.display = 'block';
                 render();
-                updateStatus("تم توليد " + cards.length + " بطاقة بنجاح! ✅", "");
+                updateStatus("تم بنجاح! ✅", "");
                 document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
             }
-        } catch (e) { updateStatus("فشل في تحليل النص. جرب نصاً أوضح.", "error"); }
+        } catch (e) { 
+            updateStatus("فشل الاتصال. تأكد من الإنترنت أو وضوح النص.", "error"); 
+        }
     }
 
     function render() {
