@@ -35,11 +35,10 @@
         }
         .secondary-btn { background: none; color: var(--primary); border: 2px solid var(--primary); }
 
-        #status-msg { margin-top: 15px; padding: 10px; border-radius: 10px; font-weight: bold; }
+        #status-msg { margin-top: 15px; padding: 10px; border-radius: 10px; font-weight: bold; min-height: 40px; }
         .loading { color: var(--primary); background: rgba(108, 92, 231, 0.1); }
         .error { color: var(--danger); background: rgba(214, 48, 49, 0.1); }
 
-        /* البطاقات */
         .flashcard-section { display: none; margin-top: 40px; }
         .flashcard-box { perspective: 1000px; width: 100%; height: 280px; }
         .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: 0.6s; cursor: pointer; }
@@ -103,8 +102,8 @@
     let cards = [];
     let currentIdx = 0;
     let stream;
-    // تم دمج مفتاحك هنا بنجاح
-    const API_KEY = "AIzaSyDkCPKMrnn4Ak1JGJab_J1k2v-64dfcWD4"; 
+    // تم تحديث المفتاح هنا بنجاح
+    const API_KEY = "AIzaSyCxcwpjtwk7jJ-jp_sTstP7gTyMMgfmKAo"; 
 
     async function initCamera() {
         document.getElementById('openCamBtn').style.display = 'none';
@@ -112,7 +111,7 @@
         try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             document.getElementById('video').srcObject = stream;
-        } catch (e) { updateStatus("خطأ في الكاميرا", "error"); }
+        } catch (e) { updateStatus("خطأ: يرجى إعطاء إذن الكاميرا", "error"); }
     }
 
     async function takeSnapshot() {
@@ -122,23 +121,26 @@
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         
-        stream.getTracks().forEach(t => t.stop());
+        if(stream) stream.getTracks().forEach(t => t.stop());
         document.getElementById('camera-wrapper').style.display = 'none';
         document.getElementById('openCamBtn').style.display = 'block';
 
         updateStatus("جاري استخراج النص من الصورة...", "loading");
-        const res = await Tesseract.recognize(canvas.toDataURL('image/jpeg'), 'ara+eng');
-        sendToAI(res.data.text);
+        try {
+            const res = await Tesseract.recognize(canvas.toDataURL('image/jpeg'), 'ara+eng');
+            sendToAI(res.data.text);
+        } catch(e) { updateStatus("خطأ في قراءة الصورة", "error"); }
     }
 
     function processFromText() {
         const t = document.getElementById('rawText').value;
-        if(t.length > 10) sendToAI(t);
+        if(t.trim().length > 10) sendToAI(t);
+        else updateStatus("النص قصير جداً لعمل مراجعة مفيدة!", "error");
     }
 
     async function sendToAI(text) {
-        updateStatus("الذكاء الاصطناعي يحلل الدرس الآن... 🧠", "loading");
-        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة ذكية للمراجعة باللغة العربية. الرد يكون فقط بصيغة JSON: [{"question": "سؤال", "answer": "جواب"}]. النص: ${text}`;
+        updateStatus("جاري الاتصال بـ Gemini وابتكار الأسئلة... 🧠", "loading");
+        const prompt = `حول النص التالي إلى مصفوفة JSON تحتوي على أسئلة وأجوبة ذكية للمراجعة باللغة العربية. الرد يجب أن يكون بصيغة مصفوفة JSON فقط: [{"question": "سؤال", "answer": "جواب"}]. النص المراد تحليله: ${text}`;
 
         try {
             const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
@@ -148,18 +150,34 @@
             });
 
             const d = await r.json();
-            const aiText = d.candidates[0].content.parts[0].text;
-            const cleanJson = aiText.substring(aiText.indexOf('['), aiText.lastIndexOf(']') + 1);
+            
+            if (d.error) {
+                updateStatus("خطأ من جوجل: " + d.error.message, "error");
+                return;
+            }
+
+            let aiText = d.candidates[0].content.parts[0].text;
+            
+            // تنظيف الرد لاستخراج المصفوفة فقط
+            const startIdx = aiText.indexOf('[');
+            const endIdx = aiText.lastIndexOf(']') + 1;
+            
+            if (startIdx === -1) throw new Error("JSON format error");
+            
+            const cleanJson = aiText.substring(startIdx, endIdx);
             cards = JSON.parse(cleanJson);
 
             if (cards.length > 0) {
                 currentIdx = 0;
                 document.getElementById('resultsArea').style.display = 'block';
                 render();
-                updateStatus("تم توليد البطاقات بنجاح! ✅", "");
+                updateStatus("تم توليد " + cards.length + " بطاقة مراجعة بنجاح! ✅", "");
+                // تمرير تلقائي لرؤية النتائج
+                document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
             }
         } catch (e) {
-            updateStatus("حدث خطأ في الاتصال. تأكد من الإنترنت.", "error");
+            console.error(e);
+            updateStatus("فشل في تحليل النص. تأكد من أن النص واضح ومفهوم.", "error");
         }
     }
 
